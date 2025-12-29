@@ -1,0 +1,65 @@
+[Unit]
+Description=BTT SFS v2.0 Jam Monitor (Prusa Core One)
+After=network-online.target
+Wants=network-online.target
+
+# Helpful if the device appears late during boot
+After=dev-ttyACM0.device dev-ttyUSB0.device
+Wants=dev-ttyACM0.device dev-ttyUSB0.device
+
+[Service]
+Type=simple
+
+# Run as the 'pi' user by default. Change if you use another user.
+User=pi
+Group=pi
+
+# Directory where you place sfs_jam_monitor.py and README.md
+WorkingDirectory=/home/pi/sfs-jam-monitor
+
+# IMPORTANT: Use /dev/serial/by-id/... when possible for stable device naming.
+# Example:
+#   ls -l /dev/serial/by-id/
+# Then replace -p /dev/ttyACM0 with that by-id path.
+#
+# Also: consider enabling rotating logs by adding:
+#   --log-file /var/log/sfs-jam-monitor.log
+#
+# And metrics export (Prometheus textfile):
+#   --metrics-file /var/lib/node_exporter/textfile_collector/sfs.prom
+ExecStart=/usr/bin/python3 /home/pi/sfs-jam-monitor/sfs_jam_monitor.py -p /dev/ttyACM0 --auto-reset --reset-pulses 1.5 --quiet-temps
+
+Restart=on-failure
+RestartSec=2
+
+# Log to journal
+StandardOutput=journal
+StandardError=journal
+
+# --- Hardening (safe defaults for a monitor service) ---
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX
+RestrictRealtime=true
+SystemCallArchitectures=native
+
+# Allow access to devices and required paths
+# (GPIO and serial are via /dev; systemd strict protections require exceptions)
+DevicePolicy=closed
+DeviceAllow=/dev/ttyACM0 rw
+DeviceAllow=/dev/ttyUSB0 rw
+DeviceAllow=/dev/gpiomem rw
+# If you use /dev/serial/by-id/, add a matching DeviceAllow line or relax DevicePolicy.
+
+# Read-write paths (only if you enable --log-file / --metrics-file)
+ReadWritePaths=/var/log /var/lib/node_exporter
+
+[Install]
+WantedBy=multi-user.target
