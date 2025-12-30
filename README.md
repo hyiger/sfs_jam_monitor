@@ -58,51 +58,7 @@
 > That’s it — jams or runout will trigger an automatic **M600 pause**.
 
 
-
-- [Overview](#overview)
-- [Quick Start](#-quick-start)
-- [Installation](#installation)
-- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
-- [Wiring Diagram](#wiring-diagram)
-- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
-- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
-- [CLI Usage](#cli-usage)
-- [Status and Version](#cli-status-and-version)
-- [JSON Logging](#json-logging)
-- [Systemd Service](#systemd-service)
-- [Calibration](#calibration)
-- [Troubleshooting](#troubleshooting)
-- [Optional Polish & Enhancements](#optional-polish--enhancements)
-- [License](#license)
-
-
-- [Overview](#overview)
-- [Installation](#installation)
-- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
-- [Wiring Diagram](#wiring-diagram)
-- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
-- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
-- [CLI Usage](#cli-usage)
-- [Status and Version](#cli-status-and-version)
-- [JSON Logging](#json-logging)
-- [Systemd Service](#systemd-service)
-- [Calibration](#calibration)
-- [Optional Polish & Enhancements](#optional-polish--enhancements)
-- [License](#license)
-
-
-- [Overview](#overview)
-- [Installation](#installation)
-- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
-- [Wiring Diagram](#wiring-diagram)
-- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
-- [CLI Usage](#cli-usage)
-- [Status and Version](#cli-status-and-version)
-- [JSON Logging](#json-logging)
-- [Systemd Service](#systemd-service)
-- [Calibration](#calibration)
-- [License](#license)
-
+## Overview
 
 A Raspberry Pi–based filament jam monitor using the **BTT SFS v2.0** optical wheel sensor.
 
