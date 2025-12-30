@@ -3,24 +3,32 @@
 <details open>
 <summary><strong>Table of Contents (click to collapse)</strong></summary>
 
+- [Overview](#overview-)
 - [Quick Start](#-quick-start)
-- [Overview](#overview)
-- [Installation](#installation)
+- [Installation](#installation-️)
 - [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
-- [Wiring Diagram](#wiring-diagram)
-- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
-- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
-- [CLI Usage](#cli-usage)
-- [Status and Version](#cli-status-and-version)
-- [JSON Logging](#json-logging)
-- [Systemd Service](#systemd-service)
-- [Calibration](#calibration)
-- [Troubleshooting](#troubleshooting)
-- [Optional Polish & Enhancements](#optional-polish--enhancements)
-- [License](#license)
+- [Wiring Diagram](#wiring-diagram-)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration-)
+- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration-)
+- [CLI Usage](#cli-usage-️)
+- [Status and Version](#cli-status-and-version-)
+- [JSON Logging](#json-logging-)
+- [Systemd Service](#systemd-service-️)
+- [Calibration](#calibration-)
+- [Troubleshooting](#troubleshooting-)
+- [Optional Polish & Enhancements](#optional-polish--enhancements-)
+- [License](#license-)
 
 </details>
 
+
+## Overview 📌
+
+A Raspberry Pi–based filament jam monitor using the **BTT SFS v2.0** optical wheel sensor.
+
+This project is designed to work **strictly with stock Marlin-based firmware** and **PrusaConnect streaming**, with **no firmware modification**, **no Klipper**, and **no host-side G-code parsing**.
+
+When a filament jam is detected, the script triggers a clean **`M600` filament change**, allowing the user to clear the jam and resume the print safely.
 
 
 > ## 🚀 Quick Start
@@ -58,13 +66,59 @@
 > That’s it — jams or runout will trigger an automatic **M600 pause**.
 
 
-## Overview
 
-A Raspberry Pi–based filament jam monitor using the **BTT SFS v2.0** optical wheel sensor.
 
-This project is designed to work **strictly with stock Marlin-based firmware** and **PrusaConnect streaming**, with **no firmware modification**, **no Klipper**, and **no host-side G-code parsing**.
 
-When a filament jam is detected, the script triggers a clean **`M600` filament change**, allowing the user to clear the jam and resume the print safely.
+
+
+
+
+- [Overview](#overview)
+- [Quick Start](#-quick-start)
+- [Installation](#installation)
+- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
+- [Wiring Diagram](#wiring-diagram)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
+- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
+- [CLI Usage](#cli-usage)
+- [Status and Version](#cli-status-and-version)
+- [JSON Logging](#json-logging)
+- [Systemd Service](#systemd-service)
+- [Calibration](#calibration)
+- [Troubleshooting](#troubleshooting)
+- [Optional Polish & Enhancements](#optional-polish--enhancements)
+- [License](#license)
+
+
+- [Overview](#overview)
+- [Installation](#installation)
+- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
+- [Wiring Diagram](#wiring-diagram)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
+- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
+- [CLI Usage](#cli-usage)
+- [Status and Version](#cli-status-and-version)
+- [JSON Logging](#json-logging)
+- [Systemd Service](#systemd-service)
+- [Calibration](#calibration)
+- [Optional Polish & Enhancements](#optional-polish--enhancements)
+- [License](#license)
+
+
+- [Overview](#overview)
+- [Installation](#installation)
+- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
+- [Wiring Diagram](#wiring-diagram)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
+- [CLI Usage](#cli-usage)
+- [Status and Version](#cli-status-and-version)
+- [JSON Logging](#json-logging)
+- [Systemd Service](#systemd-service)
+- [Calibration](#calibration)
+- [License](#license)
+
+
+
 
 ---
 
