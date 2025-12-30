@@ -220,3 +220,30 @@ python3 sfs_jam_monitor.py --help
 ```
 
 ---
+
+---
+
+## Wiring Diagram
+
+This project uses the BTT SFS v2.0 split cable with:
+
+- **RUNOUT** on **GPIO27 (BCM 27)** — *blue wire* — **Raspberry Pi physical pin 13** (Connector 1 pin 1)
+- **MOTION** on **GPIO26 (BCM 26)** — *green wire* — **Raspberry Pi physical pin 37** (Connector 2 pin 1)
+- **VCC** to **3.3V** — **Raspberry Pi pin 17** (Connector 1 pin 3)
+- **GND** to **GND** — **Raspberry Pi pin 39** (Connector 2 pin 2)
+
+> Note: Connector 1 pin 2 and Connector 2 pin 3 are NC. If you physically land NC on Pi pin 15, it is unused.
+
+### Printable diagram files
+
+- `sfs_rpi_wiring_diagram.svg` (recommended for printing)
+- `sfs_rpi_wiring_diagram.png` (easy preview)
+
+### Preview
+
+GitHub renders SVG directly:
+
+![SFS → Raspberry Pi wiring diagram (SVG)](sfs_rpi_wiring_diagram.svg)
+
+![SFS → Raspberry Pi wiring diagram (PNG)](sfs_rpi_wiring_diagram.png)
+

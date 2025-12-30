@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="900" height="650" viewBox="0 0 900 650"
+     xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: Arial, Helvetica, sans-serif; font-size: 14px; fill: #000; }
+    .title { font-size: 22px; font-weight: bold; }
+    .subtitle { font-size: 14px; }
+    .box { fill: none; stroke: #000; stroke-width: 2; }
+    .wire { stroke-width: 4; fill: none; }
+    .label { font-size: 13px; }
+    .small { font-size: 12px; }
+    .blue { stroke: #0066cc; }
+    .green { stroke: #0a8f3c; }
+    .red { stroke: #cc0000; }
+    .black { stroke: #000000; }
+    .gray { stroke: #777; }
+    .dash { stroke-dasharray: 6 4; }
+  </style>
+
+  <text x="450" y="32" text-anchor="middle" class="title">
+    BTT SFS v2.0 → Raspberry Pi Wiring Diagram
+  </text>
+  <text x="450" y="54" text-anchor="middle" class="subtitle">
+    Corrected mapping: RUNOUT = GPIO27 (blue), MOTION = GPIO26 (green)
+  </text>
+
+  <!-- SFS box -->
+  <rect x="40" y="110" width="300" height="260" class="box"/>
+  <text x="190" y="100" text-anchor="middle" class="label">BTT SFS v2.0 (split cable)</text>
+
+  <text x="60" y="145" font-weight="bold">Connector 1</text>
+  <text x="60" y="170">Pin 1: RUNOUT</text>
+  <text x="60" y="195">Pin 2: NC</text>
+  <text x="60" y="220">Pin 3: VCC (3.3V)</text>
+
+  <text x="60" y="260" font-weight="bold">Connector 2</text>
+  <text x="60" y="285">Pin 1: MOTION</text>
+  <text x="60" y="310">Pin 2: GND</text>
+  <text x="60" y="335">Pin 3: NC</text>
+
+  <!-- Raspberry Pi box -->
+  <rect x="520" y="110" width="340" height="320" class="box"/>
+  <text x="690" y="100" text-anchor="middle" class="label">Raspberry Pi 40‑pin header (physical pins)</text>
+
+  <text x="540" y="150">Pin 13: GPIO27 (BCM 27)  — RUNOUT</text>
+  <text x="540" y="180">Pin 15: GPIO22 (BCM 22)  — unused (NC)</text>
+  <text x="540" y="210">Pin 17: 3.3V</text>
+  <text x="540" y="255">Pin 37: GPIO26 (BCM 26)  — MOTION</text>
+  <text x="540" y="285">Pin 39: GND</text>
+
+  <!-- Wires: from SFS to Pi -->
+  <!-- RUNOUT: Conn1 Pin1 -> Pi Pin13 -->
+  <path d="M 340 170 C 420 170, 450 150, 520 150" class="wire blue"/>
+  <text x="410" y="155" class="label">RUNOUT (blue)</text>
+
+  <!-- NC: Conn1 Pin2 -> Pi Pin15 (optional/unused) -->
+  <path d="M 340 195 C 420 195, 450 180, 520 180" class="wire gray dash"/>
+  <text x="410" y="183" class="small">NC (optional)</text>
+
+  <!-- VCC: Conn1 Pin3 -> Pi Pin17 -->
+  <path d="M 340 220 C 420 220, 450 210, 520 210" class="wire red"/>
+  <text x="410" y="205" class="label">VCC 3.3V (red)</text>
+
+  <!-- MOTION: Conn2 Pin1 -> Pi Pin37 -->
+  <path d="M 340 285 C 420 285, 450 255, 520 255" class="wire green"/>
+  <text x="410" y="265" class="label">MOTION (green)</text>
+
+  <!-- GND: Conn2 Pin2 -> Pi Pin39 -->
+  <path d="M 340 310 C 420 310, 450 285, 520 285" class="wire black"/>
+  <text x="410" y="295" class="label">GND (black)</text>
+
+  <!-- Legend -->
+  <rect x="40" y="410" width="820" height="190" class="box"/>
+  <text x="60" y="440" font-weight="bold">Legend / Notes</text>
+
+  <circle cx="70" cy="470" r="6" fill="#0066cc"/><text x="90" y="475">Blue = RUNOUT signal → Pi Pin 13 (GPIO27)</text>
+  <circle cx="70" cy="500" r="6" fill="#0a8f3c"/><text x="90" y="505">Green = MOTION pulses → Pi Pin 37 (GPIO26)</text>
+  <circle cx="70" cy="530" r="6" fill="#cc0000"/><text x="90" y="535">Red = 3.3V power → Pi Pin 17</text>
+  <circle cx="70" cy="560" r="6" fill="#000000"/><text x="90" y="565">Black = Ground → Pi Pin 39</text>
+  <line x1="62" y1="590" x2="78" y2="590" class="wire gray dash" style="stroke-width:3"/><text x="90" y="595">Dashed gray = NC / unused (optional)</text>
+
+  <text x="60" y="625" class="small">
+    Both RUNOUT and MOTION outputs are typically active-low/open-collector; the script enables Raspberry Pi internal pull-ups.
+    Use 3.3V only (Pi GPIOs are not 5V tolerant).
+  </text>
+</svg>
