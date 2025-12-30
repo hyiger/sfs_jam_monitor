@@ -1,5 +1,28 @@
 # BTT SFS v2.0 Jam Monitor for Prusa Core One (Stock Firmware)
 
+<details open>
+<summary><strong>Table of Contents (click to collapse)</strong></summary>
+
+- [Quick Start](#-quick-start)
+- [Overview](#overview)
+- [Installation](#installation)
+- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
+- [Wiring Diagram](#wiring-diagram)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
+- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
+- [CLI Usage](#cli-usage)
+- [Status and Version](#cli-status-and-version)
+- [JSON Logging](#json-logging)
+- [Systemd Service](#systemd-service)
+- [Calibration](#calibration)
+- [Troubleshooting](#troubleshooting)
+- [Optional Polish & Enhancements](#optional-polish--enhancements)
+- [License](#license)
+
+</details>
+
+
+
 > ## 🚀 Quick Start
 >
 > **Hardware**
@@ -35,8 +58,6 @@
 > That’s it — jams or runout will trigger an automatic **M600 pause**.
 
 
-
-## Table of Contents
 
 - [Overview](#overview)
 - [Quick Start](#-quick-start)
@@ -166,7 +187,7 @@ chmod +x sfs-monitor.py
 
 ---
 
-## PrusaSlicer Start G-code Integration
+## PrusaSlicer Start G-code Integration 🧾
 
 ⚠️ **This step is mandatory.**  
 The monitor relies on `M118` markers echoed back by firmware.
@@ -282,7 +303,7 @@ python3 sfs-monitor.py --runout-test --runout-gpio 27 --runout-active-high
 
 ---
 
-## CLI: Status and Version
+## CLI: Status and Version 🏷️
 
 Print the tool version:
 
@@ -306,7 +327,7 @@ python3 sfs-monitor.py --help
 
 ---
 
-## Wiring Diagram
+## Wiring Diagram 🧷
 
 This project uses the BTT SFS v2.0 split cable with:
 
@@ -332,7 +353,7 @@ GitHub renders SVG directly:
 
 ---
 
-## PrusaSlicer Start G-code Integration
+## PrusaSlicer Start G-code Integration 🧾
 
 The monitor is controlled via G-code comments sent over the serial console using `M118 A1`.
 These comments are ignored by stock Marlin but are parsed by the monitor.
@@ -408,7 +429,7 @@ This mode does **not** pause the printer and is safe to run anytime.
 
 ---
 
-## JSON logging
+## JSON logging 🧠
 
 Enable JSON Lines logging (one JSON object per line). This is useful for ingestion into log systems
 (Loki/Promtail, ELK/Filebeat, etc.) or for parsing with `jq`.
@@ -429,7 +450,7 @@ Tip: combine with `--quiet-temps` to reduce noise from periodic temperature repo
 
 ---
 
-## PrusaSlicer End G-code Integration
+## PrusaSlicer End G-code Integration ✅
 
 Add the following to your **End G-code** in PrusaSlicer to cleanly disable the
 monitor at the end of a print:
@@ -448,7 +469,7 @@ This is especially important when the printer remains powered on between jobs.
 
 ---
 
-## Optional Polish & Enhancements
+## Optional Polish & Enhancements ✨
 
 These are **optional quality-of-life improvements** you may want to enable or add
 after running the monitor for a while.
@@ -484,7 +505,7 @@ Optionally publish events (jam/runout) via:
 
 ---
 
-## Troubleshooting
+## Troubleshooting 🧯
 
 ### Jam or runout triggers immediately at print start
 **Cause:** Monitor was still latched from a previous print or test.  
