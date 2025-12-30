@@ -212,11 +212,11 @@ def main() -> int:
       # Version
       python3 sfs_jam_monitor.py --version
     """)
-)
+    )
     ap.add_argument("-p", "--port", default="", help="Printer serial port (required unless --runout-test)")
     ap.add_argument("-b","--baud", type=int, default=115200)
     ap.add_argument("--motion-gpio", type=int, default=26, help="SFS motion pulse GPIO (BCM)")
-ap.add_argument("--runout-gpio", type=int, default=27, help="SFS runout switch GPIO (BCM)")
+    ap.add_argument("--runout-gpio", type=int, default=27, help="SFS runout switch GPIO (BCM)")
     ap.add_argument("--runout-enabled", action="store_true", default=True)
     ap.add_argument("--no-runout", dest="runout_enabled", action="store_false")
     ap.add_argument("--runout-active-low", action="store_true", default=True)
@@ -254,23 +254,16 @@ ap.add_argument("--runout-gpio", type=int, default=27, help="SFS runout switch G
     ap.add_argument("--rts", choices=["on","off"], default="off")
     args = ap.parse_args()
 
-    # Backward compatibility: legacy --motion-gpio maps to --motion-gpio
-    if getattr(args, 'gpio', None) is not None:
-        args.motion_gpio = args.motion_gpio
+    if args.doctor:
+        print("Doctor mode: basic wiring sanity check")
+        print(" - Move filament to observe MOTION pulses")
+        print(" - Remove filament to observe RUNOUT change")
+        return 0
 
-    
-if args.doctor:
-    print("Doctor mode: basic wiring sanity check")
-    print(" - Move filament to observe MOTION pulses")
-    print(" - Remove filament to observe RUNOUT change")
-    return 0
-
-if args.version:
-
+    if args.version:
         print(f"sfs-jam-monitor {__version__} ({__build__})")
         print("License: GPL-3.0-or-later")
         return 0
-
     if (not args.port) and (not args.runout_test) and (not args.status):
         ap.error("--port is required unless --runout-test is used")
 
@@ -308,272 +301,288 @@ if args.version:
         pull_up = True if args.runout_active_low else False
         active_state = False if args.runout_active_low else True
         runout_pin = DigitalInputDevice(args.runout_gpio, pull_up=pull_up, active_state=active_state)
-# RUNOUT TEST MODE (no serial required)
-if args.runout_test:
-    if not args.runout_enabled:
-        log.info("Runout test requested but runout monitoring is disabled (--no-runout).")
-        return 2
-    if runout_pin is None:
-        log.info("Runout GPIO not initialized.")
-        return 2
+    # RUNOUT TEST MODE (no serial required)
+    if args.runout_test:
+        if not args.runout_enabled:
+            log.info("Runout test requested but runout monitoring is disabled (--no-runout).")
+            return 2
+        if runout_pin is None:
+            log.info("Runout GPIO not initialized.")
+            return 2
 
-    log.info("RUNOUT TEST: GPIO %d (active-%s). Toggle filament present/out to observe changes.",
-             args.runout_gpio, "low" if args.runout_active_low else "high")
-    log.info("Press Ctrl-C to exit.")
+        log.info("RUNOUT TEST: GPIO %d (active-%s). Toggle filament present/out to observe changes.",
+                 args.runout_gpio, "low" if args.runout_active_low else "high")
+        log.info("Press Ctrl-C to exit.")
 
-    # Print initial state
-    last = runout_pin.is_active
-    log.info("RUNOUT asserted=%s", last)
+        # Print initial state
+        last = runout_pin.is_active
+        log.info("RUNOUT asserted=%s", last)
 
-    ev = threading.Event()
+        ev = threading.Event()
 
-    def report():
-        nonlocal last
-        cur = runout_pin.is_active
-        if cur != last:
-            last = cur
-            log.info("RUNOUT asserted=%s", cur)
+        def report():
+            nonlocal last
+            cur = runout_pin.is_active
+            if cur != last:
+                last = cur
+                log.info("RUNOUT asserted=%s", cur)
 
-    runout_pin.when_activated = report
-    runout_pin.when_deactivated = report
+        runout_pin.when_activated = report
+        runout_pin.when_deactivated = report
 
-    try:
-        while True:
-            time.sleep(0.2)
-    except KeyboardInterrupt:
-        log.info("Runout test stopped.")
-    finally:
-        runout_pin.close()
-        pulse_pin.close()
-    return 0
+        try:
+            while True:
+                time.sleep(0.2)
+        except KeyboardInterrupt:
+            log.info("Runout test stopped.")
+        finally:
+            runout_pin.close()
+            pulse_pin.close()
+        return 0
 
 
 
-    def is_active(now: float) -> bool:
-        if not args.require_active: return True
-        return (now - st.last_active_evidence_time) <= args.active_recent_seconds
+        def is_active(now: float) -> bool:
+            if not args.require_active: return True
+            return (now - st.last_active_evidence_time) <= args.active_recent_seconds
 
-    def on_pulse():
-        now = time.time()
-        st.pulse_total += 1
-        st.last_pulse_time = now
-        if is_active(now):
-            st.armed_until = now + args.arm_hold
-            st.ever_pulsed = True
-            if st.latched and args.auto_reset and st.reason == "jam" and st.reset_candidate_since is None:
-                st.reset_candidate_since = now
+        def on_pulse():
+            now = time.time()
+            st.pulse_total += 1
+            st.last_pulse_time = now
+            if is_active(now):
+                st.armed_until = now + args.arm_hold
+                st.ever_pulsed = True
+                if st.latched and args.auto_reset and st.reason == "jam" and st.reset_candidate_since is None:
+                    st.reset_candidate_since = now
+                    st.reset_start_pulse_total = st.pulse_total
+            else:
+                st.reset_candidate_since = None
                 st.reset_start_pulse_total = st.pulse_total
-        else:
-            st.reset_candidate_since = None
-            st.reset_start_pulse_total = st.pulse_total
 
-    pulse_pin.when_activated = on_pulse
+        pulse_pin.when_activated = on_pulse
 
-    link = SerialLink(args.port, args.baud, dtr=(args.dtr=="on"), rts=(args.rts=="on"),
-                      quiet_temps=args.quiet_temps, log=log)
+        link = SerialLink(args.port, args.baud, dtr=(args.dtr=="on"), rts=(args.rts=="on"),
+                          quiet_temps=args.quiet_temps, log=log)
 
-    def announce(msg: str):
-        link.send(f"M118 A1 {msg}")
+        def announce(msg: str):
+            link.send(f"M118 A1 {msg}")
 
-    def trigger(reason: str):
-        if st.latched: return
-        st.latched = True
-        st.reason = reason
-        st.post_trigger_grace_until = time.time() + args.post_jam_grace
-        st.pending_action = False
-        if reason == "runout":
-            st.runout_count += 1
-            log_event("runout", action_sent=(not args.dry_run))
-            announce("SFS: Runout detected")
-        else:
-            st.jam_count += 1
-            log.info("JAM: no pulses for %.2fs (sending action=%s)", time.time()-st.last_pulse_time, "NO" if args.dry_run else "YES")
-            announce("SFS: Jam detected")
-
-        if args.dry_run:
-            announce("SFS: DRY-RUN (not sending jam_gcode)")
-            return
-
-        if link.connected.is_set():
-            if not link.send(args.jam_gcode):
-                st.pending_action = True
-        else:
-            st.pending_action = True
-
-    def handle_sensor(cmd: str):
-        cmd = cmd.lower()
-        if cmd in ("reset","enable"):
-            st.enabled = True if cmd=="enable" else st.enabled
-            st.latched = False
-            st.reason = ""
+        def trigger(reason: str):
+            if st.latched: return
+            st.latched = True
+            st.reason = reason
+            st.post_trigger_grace_until = time.time() + args.post_jam_grace
             st.pending_action = False
-            st.reset_candidate_since = None
-            st.grace_until = 0.0
-            st.post_trigger_grace_until = 0.0
-            st.last_pulse_time = time.time()
-            log.info("SFS: %s", cmd)
-        elif cmd == "disable":
-            st.enabled = False
-            log.info("SFS: disabled")
+            if reason == "runout":
+                st.runout_count += 1
+                log_event("runout", action_sent=(not args.dry_run))
+                announce("SFS: Runout detected")
+            else:
+                st.jam_count += 1
+                log.info("JAM: no pulses for %.2fs (sending action=%s)", time.time()-st.last_pulse_time, "NO" if args.dry_run else "YES")
+                announce("SFS: Jam detected")
 
-    def on_line(text: str, suppressed: bool):
-        m = RE_SENSOR.match(text)
-        if m: handle_sensor(m.group(1))
-        if RE_BUSY.match(text):
-            st.last_active_evidence_time = time.time()
-        tm = RE_TEMP.match(text)
-        if tm:
-            try:
-                ttgt = float(tm.group("ttgt"))
-                if ttgt >= args.arm_temp_threshold:
-                    st.last_active_evidence_time = time.time()
-            except Exception:
-                pass
-        if not suppressed:
-            log.info("%s", text)
+            if args.dry_run:
+                announce("SFS: DRY-RUN (not sending jam_gcode)")
+                return
 
-    link.start(on_line)
+            if link.connected.is_set():
+                if not link.send(args.jam_gcode):
+                    st.pending_action = True
+            else:
+                st.pending_action = True
 
+        def handle_sensor(cmd: str):
+            cmd = cmd.lower()
+            if cmd in ("reset","enable"):
+                st.enabled = True if cmd=="enable" else st.enabled
+                st.latched = False
+                st.reason = ""
+                st.pending_action = False
+                st.reset_candidate_since = None
+                st.grace_until = 0.0
+                st.post_trigger_grace_until = 0.0
+                st.last_pulse_time = time.time()
+                log.info("SFS: %s", cmd)
+            elif cmd == "disable":
+                st.enabled = False
+                log.info("SFS: disabled")
 
-def print_status()
-                if args.json:
-                    print(json.dumps(st.__dict__, indent=2, default=str)):
-    now = time.time()
-    armed = (now <= st.armed_until) and st.ever_pulsed and (not st.latched)
-    print("SFS Jam Monitor Status")
-    print("----------------------")
-    print(f"Version           : {__version__} ({__build__})")
-    print(f"Enabled           : {st.enabled}")
-    print(f"Latched           : {st.latched}")
-    print(f"Trigger reason    : {st.reason or 'none'}")
-    print(f"Serial connected  : {link.connected.is_set()}")
-    print(f"Armed             : {armed}")
-    print(f"Pulse total       : {st.pulse_total}")
-    print(f"Last pulse age    : {max(0.0, now - st.last_pulse_time):.2f}s")
-    print(f"Runout asserted   : {st.runout_asserted}")
-    print(f"Jam count         : {st.jam_count}")
-    print(f"Runout count      : {st.runout_count}")
+        def on_line(text: str, suppressed: bool):
+            m = RE_SENSOR.match(text)
+            if m: handle_sensor(m.group(1))
+            if RE_BUSY.match(text):
+                st.last_active_evidence_time = time.time()
+            tm = RE_TEMP.match(text)
+            if tm:
+                try:
+                    ttgt = float(tm.group("ttgt"))
+                    if ttgt >= args.arm_temp_threshold:
+                        st.last_active_evidence_time = time.time()
+                except Exception:
+                    pass
+            if not suppressed:
+                log.info("%s", text)
 
+        link.start(on_line)
+    def print_status():
+        now = time.time()
+        armed = (now <= st.armed_until) and st.ever_pulsed and (not st.latched)
+
+        print("SFS Jam Monitor Status")
+        print("----------------------")
+        print(f"Version           : {__version__} ({__build__})")
+        print(f"Enabled           : {st.enabled}")
+        print(f"Latched           : {st.latched}")
+        print(f"Trigger reason    : {st.reason or 'none'}")
+        print(f"Serial connected  : {link.connected.is_set()}")
+        print(f"Armed             : {armed}")
+        print(f"Pulse total       : {st.pulse_total}")
+        print(f"Last pulse age    : {max(0.0, now - st.last_pulse_time):.2f}s")
+        print(f"Runout asserted   : {st.runout_asserted}")
+        print(f"Jam count         : {st.jam_count}")
+        print(f"Runout count      : {st.runout_count}")
+
+        if args.json:
+            print(json.dumps(_fields(now), indent=2, ensure_ascii=False))
 
     # Runout debounce
-    if runout_pin is not None:
-        lock = threading.Lock()
-        def on_runout_change():
-            now = time.time()
-            with lock:
-                st.last_runout_edge_time = now
-            def deb(edge: float):
-                time.sleep(args.runout_debounce)
+
+        if runout_pin is not None:
+            lock = threading.Lock()
+            def on_runout_change():
+                now = time.time()
                 with lock:
-                    if st.last_runout_edge_time != edge: return
-                st.runout_asserted = runout_pin.is_active
-                if st.runout_asserted and st.enabled:
-                    trigger("runout")
-            threading.Thread(target=deb, args=(now,), daemon=True).start()
-        runout_pin.when_activated = on_runout_change
-        runout_pin.when_deactivated = on_runout_change
+                    st.last_runout_edge_time = now
+                def deb(edge: float):
+                    time.sleep(args.runout_debounce)
+                    with lock:
+                        if st.last_runout_edge_time != edge: return
+                    st.runout_asserted = runout_pin.is_active
+                    if st.runout_asserted and st.enabled:
+                        trigger("runout")
+                threading.Thread(target=deb, args=(now,), daemon=True).start()
+            runout_pin.when_activated = on_runout_change
+            runout_pin.when_deactivated = on_runout_change
 
-# One-shot status (attempt quick serial connect, then exit)
-if args.status:
-    t0 = time.time()
-    while (args.port and (not link.connected.is_set())) and (time.time() - t0) < 1.5:
-        time.sleep(0.05)
-    print_status()
-                if args.json:
-                    print(json.dumps(st.__dict__, indent=2, default=str))
-    link.shutdown()
-    pulse_pin.close()
-    if runout_pin is not None:
-        runout_pin.close()
-    return 0
-
-
-
-    last_hb = 0.0
-    last_phb = 0.0
-    last_metrics = 0.0
-    last_connected = link.connected.is_set()
-
-    def emit_metrics(now: float):
-        if not args.metrics_file: return
-        p = Path(args.metrics_file)
-        content = "\n".join([
-            f"sfs_connected {1 if link.connected.is_set() else 0}",
-            f"sfs_enabled {1 if st.enabled else 0}",
-            f"sfs_latched {1 if st.latched else 0}",
-            f"sfs_trigger_reason {2 if st.reason=='runout' else (1 if st.reason=='jam' else 0)}",
-            f"sfs_armed {1 if (now<=st.armed_until and st.ever_pulsed and not st.latched) else 0}",
-            f"sfs_pulse_total {st.pulse_total}",
-            f"sfs_jam_count {st.jam_count}",
-            f"sfs_runout_asserted {1 if st.runout_asserted else 0}",
-            f"sfs_runout_count {st.runout_count}",
-            f"sfs_last_pulse_age_seconds {max(0.0, now-st.last_pulse_time):.3f}",
-            ""
-        ])
-        try: atomic_write_text(p, content)
-        except Exception as e: log.warning("Metrics write failed: %s", e)
-
-    try:
-        while True:
+        # One-shot status (attempt quick serial connect, then exit)
+    if args.status:
+        t0 = time.time()
+        while (args.port and (not link.connected.is_set())) and (time.time() - t0) < 1.5:
             time.sleep(0.05)
-            now = time.time()
-
-            if args.heartbeat_seconds>0 and (now-last_hb)>=args.heartbeat_seconds:
-                last_hb = now
-                armed = (now<=st.armed_until) and st.ever_pulsed and (not st.latched)                log.info("HEARTBEAT enabled=%s latched=%s reason=%s connected=%s armed=%s pulses=%d last_pulse_age=%.2fs jams=%d runouts=%d runout_asserted=%s",
-                         st.enabled, st.latched, st.reason, link.connected.is_set(), armed, st.pulse_total,
-                         max(0.0, now - st.last_pulse_time), st.jam_count, st.runout_count, st.runout_asserted)
-                log_event("heartbeat")
-
-            if args.printer_heartbeat_seconds>0 and link.connected.is_set() and (now-last_phb)>=args.printer_heartbeat_seconds:
-                last_phb = now
-                armed = (now<=st.armed_until) and st.ever_pulsed and (not st.latched)
-                announce(f"SFS: OK enabled={int(st.enabled)} armed={int(armed)} latched={int(st.latched)} reason={st.reason or 'none'} pulses={st.pulse_total} runout={int(st.runout_asserted)}")
-
-            if args.metrics_file and (now-last_metrics)>=5.0:
-                last_metrics = now
-                emit_metrics(now)
-
-            connected_now = link.connected.is_set()
-            if connected_now and not last_connected:
-                log_event("serial_reconnected")
-                if st.pending_action and st.latched and not args.dry_run:
-                    link.send(args.jam_gcode)
-                    st.pending_action = False
-            last_connected = connected_now
-
-            if not st.enabled: continue
-
-            # Auto-reset for jam only
-            if st.latched and args.auto_reset and st.reason=="jam" and st.reset_candidate_since is not None:
-                sustained = now - st.reset_candidate_since
-                pulses_since = st.pulse_total - st.reset_start_pulse_total
-                if (now<=st.armed_until and sustained>=args.reset_pulses and pulses_since>=args.reset_min_pulses):
-                    st.latched = False
-                    st.reason = ""
-                    st.pending_action = False
-                    st.reset_candidate_since = None
-                    st.grace_until = now + args.post_reset_grace
-                    announce("SFS: auto-reset")
-                    log_event("auto_reset", sustained_s=round(sustained,3), pulses_since=int(pulses_since))
-                elif now>st.armed_until:
-                    st.reset_candidate_since = None
-                    st.reset_start_pulse_total = st.pulse_total
-
-            if st.latched: continue
-            if now < st.grace_until or now < st.post_trigger_grace_until: continue
-
-            if st.ever_pulsed and now<=st.armed_until and (now-st.last_pulse_time)>args.timeout:
-                trigger("jam")
-
-    except KeyboardInterrupt:
-        log.info("Stopped by user")
-    finally:
+        print_status()
         link.shutdown()
         pulse_pin.close()
-        if runout_pin is not None: runout_pin.close()
+        if runout_pin is not None:
+            runout_pin.close()
+        return 0
 
-    return 0
+
+
+        last_hb = 0.0
+        last_phb = 0.0
+        last_metrics = 0.0
+        last_connected = link.connected.is_set()
+
+        def emit_metrics(now: float):
+            if not args.metrics_file: return
+            p = Path(args.metrics_file)
+            content = "\n".join([
+                f"sfs_connected {1 if link.connected.is_set() else 0}",
+                f"sfs_enabled {1 if st.enabled else 0}",
+                f"sfs_latched {1 if st.latched else 0}",
+                f"sfs_trigger_reason {2 if st.reason=='runout' else (1 if st.reason=='jam' else 0)}",
+                f"sfs_armed {1 if (now<=st.armed_until and st.ever_pulsed and not st.latched) else 0}",
+                f"sfs_pulse_total {st.pulse_total}",
+                f"sfs_jam_count {st.jam_count}",
+                f"sfs_runout_asserted {1 if st.runout_asserted else 0}",
+                f"sfs_runout_count {st.runout_count}",
+                f"sfs_last_pulse_age_seconds {max(0.0, now-st.last_pulse_time):.3f}",
+                ""
+            ])
+            try: atomic_write_text(p, content)
+            except Exception as e: log.warning("Metrics write failed: %s", e)
+
+        try:
+            while True:
+                time.sleep(0.05)
+                now = time.time()
+
+                if args.heartbeat_seconds > 0 and (now - last_hb) >= args.heartbeat_seconds:
+                    last_hb = now
+                    armed = (now <= st.armed_until) and st.ever_pulsed and (not st.latched)
+                    log.info(
+                        "HEARTBEAT enabled=%s latched=%s reason=%s connected=%s armed=%s pulses=%d last_pulse_age=%.2fs jams=%d runouts=%d runout_asserted=%s",
+                        st.enabled,
+                        st.latched,
+                        st.reason,
+                        link.connected.is_set(),
+                        armed,
+                        st.pulse_total,
+                        max(0.0, now - st.last_pulse_time),
+                        st.jam_count,
+                        st.runout_count,
+                        st.runout_asserted,
+                    )
+                    log_event("heartbeat")
+
+                if (
+                    args.printer_heartbeat_seconds > 0
+                    and link.connected.is_set()
+                    and (now - last_phb) >= args.printer_heartbeat_seconds
+                ):
+                    last_phb = now
+                    armed = (now <= st.armed_until) and st.ever_pulsed and (not st.latched)
+                    announce(
+                        f"SFS: OK enabled={int(st.enabled)} latched={int(st.latched)} armed={int(armed)} "
+                        f"reason={st.reason or 'none'} pulses={st.pulse_total} runout={int(st.runout_asserted)}"
+                    )
+
+                if args.metrics_file and (now-last_metrics)>=5.0:
+                    last_metrics = now
+                    emit_metrics(now)
+
+                connected_now = link.connected.is_set()
+                if connected_now and not last_connected:
+                    log_event("serial_reconnected")
+                    if st.pending_action and st.latched and not args.dry_run:
+                        link.send(args.jam_gcode)
+                        st.pending_action = False
+                last_connected = connected_now
+
+                if not st.enabled: continue
+
+                # Auto-reset for jam only
+                if st.latched and args.auto_reset and st.reason=="jam" and st.reset_candidate_since is not None:
+                    sustained = now - st.reset_candidate_since
+                    pulses_since = st.pulse_total - st.reset_start_pulse_total
+                    if (now<=st.armed_until and sustained>=args.reset_pulses and pulses_since>=args.reset_min_pulses):
+                        st.latched = False
+                        st.reason = ""
+                        st.pending_action = False
+                        st.reset_candidate_since = None
+                        st.grace_until = now + args.post_reset_grace
+                        announce("SFS: auto-reset")
+                        log_event("auto_reset", sustained_s=round(sustained,3), pulses_since=int(pulses_since))
+                    elif now>st.armed_until:
+                        st.reset_candidate_since = None
+                        st.reset_start_pulse_total = st.pulse_total
+
+                if st.latched: continue
+                if now < st.grace_until or now < st.post_trigger_grace_until: continue
+
+                if st.ever_pulsed and now<=st.armed_until and (now-st.last_pulse_time)>args.timeout:
+                    trigger("jam")
+
+        except KeyboardInterrupt:
+            log.info("Stopped by user")
+        finally:
+            link.shutdown()
+            pulse_pin.close()
+            if runout_pin is not None: runout_pin.close()
+
+        return 0
 
 if __name__ == "__main__":
     raise SystemExit(main())
