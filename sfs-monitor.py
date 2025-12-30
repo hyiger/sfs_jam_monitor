@@ -252,6 +252,7 @@ def main() -> int:
     ap.add_argument("--metrics-file", default="")
     ap.add_argument("--dtr", choices=["on","off"], default="off")
     ap.add_argument("--rts", choices=["on","off"], default="off")
+    ap.add_argument("--doctor", action="store_true", help="Run hardware self-test (no pause, no serial required)")
     args = ap.parse_args()
 
     if args.doctor:
