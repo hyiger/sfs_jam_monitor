@@ -253,6 +253,8 @@ def main() -> int:
     ap.add_argument("--dtr", choices=["on","off"], default="off")
     ap.add_argument("--rts", choices=["on","off"], default="off")
     ap.add_argument("--doctor", action="store_true", help="Run hardware self-test (no pause, no serial required)")
+    ap.add_argument("--version", action="store_true")
+
     args = ap.parse_args()
 
     if args.doctor:
