@@ -65,6 +65,61 @@ When a filament jam is detected, the script triggers a clean **`M600` filament c
 >
 > That’s it — jams or runout will trigger an automatic **M600 pause**.
 
+
+
+
+
+
+
+
+
+- [Overview](#overview)
+- [Quick Start](#-quick-start)
+- [Installation](#installation)
+- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
+- [Wiring Diagram](#wiring-diagram)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
+- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
+- [CLI Usage](#cli-usage)
+- [Status and Version](#cli-status-and-version)
+- [JSON Logging](#json-logging)
+- [Systemd Service](#systemd-service)
+- [Calibration](#calibration)
+- [Troubleshooting](#troubleshooting)
+- [Optional Polish & Enhancements](#optional-polish--enhancements)
+- [License](#license)
+
+
+- [Overview](#overview)
+- [Installation](#installation)
+- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
+- [Wiring Diagram](#wiring-diagram)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
+- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
+- [CLI Usage](#cli-usage)
+- [Status and Version](#cli-status-and-version)
+- [JSON Logging](#json-logging)
+- [Systemd Service](#systemd-service)
+- [Calibration](#calibration)
+- [Optional Polish & Enhancements](#optional-polish--enhancements)
+- [License](#license)
+
+
+- [Overview](#overview)
+- [Installation](#installation)
+- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
+- [Wiring Diagram](#wiring-diagram)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
+- [CLI Usage](#cli-usage)
+- [Status and Version](#cli-status-and-version)
+- [JSON Logging](#json-logging)
+- [Systemd Service](#systemd-service)
+- [Calibration](#calibration)
+- [License](#license)
+
+
+
+
 ---
 
 ## Key Features
@@ -405,6 +460,8 @@ Tip: combine with `--quiet-temps` to reduce noise from periodic temperature repo
 
 ---
 
+---
+
 ## PrusaSlicer End G-code Integration ✅
 
 Add the following to your **End G-code** in PrusaSlicer to cleanly disable the
@@ -414,13 +471,27 @@ monitor at the end of a print:
 M118 A1 // sensor:disable
 ```
 
+### Recommended placement
+
+Place this line **after the final park move** and **before motors are disabled**.
+For example:
+
+```gcode
+G1 X242 Y211 F10200 ; park
+M118 A1 // sensor:disable
+G4 ; wait
+M84 X Y E ; disable motors
+```
+
 ### Why this matters
 
-- Prevents false jam/runout detection after the print finishes
-- Ensures the monitor is inactive during cooldown and motor shutdown
-- Keeps the monitor state clean between prints
+- Prevents false jam/runout detection during cooldown
+- Avoids edge cases during motor shutdown
+- Produces clean, well-bounded logs per print
+- Ensures the monitor is inactive between jobs
 
-This is especially important when the printer remains powered on between jobs.
+This is especially important when the printer remains powered on between prints.
+
 
 ---
 
