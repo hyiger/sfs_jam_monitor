@@ -1,5 +1,88 @@
 # BTT SFS v2.0 Jam Monitor for Prusa Core One (Stock Firmware)
 
+> ## 🚀 Quick Start
+>
+> **Hardware**
+> - Connect **RUNOUT → GPIO27 (blue)** and **MOTION → GPIO26 (green)**
+> - Power SFS from **3.3 V** (Pi pin 17), common **GND** (Pi pin 39)
+>
+> **Install**
+> ```bash
+> python3 -m venv venv
+> source venv/bin/activate
+> pip install -r requirements.txt
+> ```
+>
+> **Run**
+> ```bash
+> python3 sfs-monitor.py -p /dev/ttyACM0 --motion-gpio 26 --runout-gpio 27
+> ```
+>
+> **PrusaSlicer**
+> - Start G-code:
+>   ```gcode
+>   M118 A1 // sensor:enable
+>   ```
+> - Before purge:
+>   ```gcode
+>   M118 A1 // sensor:reset
+>   ```
+> - End G-code:
+>   ```gcode
+>   M118 A1 // sensor:disable
+>   ```
+>
+> That’s it — jams or runout will trigger an automatic **M600 pause**.
+
+
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Start](#-quick-start)
+- [Installation](#installation)
+- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
+- [Wiring Diagram](#wiring-diagram)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
+- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
+- [CLI Usage](#cli-usage)
+- [Status and Version](#cli-status-and-version)
+- [JSON Logging](#json-logging)
+- [Systemd Service](#systemd-service)
+- [Calibration](#calibration)
+- [Troubleshooting](#troubleshooting)
+- [Optional Polish & Enhancements](#optional-polish--enhancements)
+- [License](#license)
+
+
+- [Overview](#overview)
+- [Installation](#installation)
+- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
+- [Wiring Diagram](#wiring-diagram)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
+- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
+- [CLI Usage](#cli-usage)
+- [Status and Version](#cli-status-and-version)
+- [JSON Logging](#json-logging)
+- [Systemd Service](#systemd-service)
+- [Calibration](#calibration)
+- [Optional Polish & Enhancements](#optional-polish--enhancements)
+- [License](#license)
+
+
+- [Overview](#overview)
+- [Installation](#installation)
+- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
+- [Wiring Diagram](#wiring-diagram)
+- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
+- [CLI Usage](#cli-usage)
+- [Status and Version](#cli-status-and-version)
+- [JSON Logging](#json-logging)
+- [Systemd Service](#systemd-service)
+- [Calibration](#calibration)
+- [License](#license)
+
+
 A Raspberry Pi–based filament jam monitor using the **BTT SFS v2.0** optical wheel sensor.
 
 This project is designed to work **strictly with stock Marlin-based firmware** and **PrusaConnect streaming**, with **no firmware modification**, **no Klipper**, and **no host-side G-code parsing**.
@@ -83,7 +166,7 @@ chmod +x sfs-monitor.py
 
 ---
 
-## PrusaSlicer Configuration (REQUIRED)
+## PrusaSlicer Start G-code Integration
 
 ⚠️ **This step is mandatory.**  
 The monitor relies on `M118` markers echoed back by firmware.
@@ -343,3 +426,136 @@ python3 sfs-monitor.py -p /dev/ttyACM0 --log-json --log-file /var/log/sfs-monito
 ```
 
 Tip: combine with `--quiet-temps` to reduce noise from periodic temperature reports.
+
+---
+
+## PrusaSlicer End G-code Integration
+
+Add the following to your **End G-code** in PrusaSlicer to cleanly disable the
+monitor at the end of a print:
+
+```gcode
+M118 A1 // sensor:disable
+```
+
+### Why this matters
+
+- Prevents false jam/runout detection after the print finishes
+- Ensures the monitor is inactive during cooldown and motor shutdown
+- Keeps the monitor state clean between prints
+
+This is especially important when the printer remains powered on between jobs.
+
+---
+
+## Optional Polish & Enhancements
+
+These are **optional quality-of-life improvements** you may want to enable or add
+after running the monitor for a while.
+
+### Quick Start section
+Add a short "Quick Start" near the top of the README showing:
+- wiring summary
+- one command to start the daemon
+- required Start/End G-code lines
+
+### Stable serial device naming (udev)
+Create a udev rule so the printer always appears as the same device path
+(e.g. `/dev/tty-prusa`) instead of `/dev/ttyACM0`.
+
+### Structured logging options
+- Use `--log-json` for machine-readable logs
+- Ship logs to Loki / ELK / Promtail if desired
+
+### Health checks
+- Use `--status` for one-shot diagnostics
+- Use `--doctor` to verify wiring and polarity
+
+### Notifications (advanced)
+Optionally publish events (jam/runout) via:
+- MQTT
+- Home Assistant
+- custom scripts triggered by JSON logs
+
+### Documentation polish
+- Embed the wiring diagram inline (SVG renders on GitHub)
+- Keep GPIO numbers explicit (BCM vs physical)
+- Treat the README as the single source of truth
+
+---
+
+## Troubleshooting
+
+### Jam or runout triggers immediately at print start
+**Cause:** Monitor was still latched from a previous print or test.  
+**Fix:** Ensure this is present before the purge sequence in Start G-code:
+
+```gcode
+M118 A1 // sensor:reset
+```
+
+---
+
+### False jam detections during travel moves
+**Cause:** Monitor enabled but no extrusion occurring.  
+**Fix:** This is expected behavior only if the monitor is incorrectly armed.
+Verify:
+- `M118 A1 // sensor:enable` is present
+- Extruder is in **relative mode (`M83`)**
+- Monitor arming logic is enabled (default)
+
+---
+
+### Runout not detected
+**Cause:** Wiring or polarity issue on the RUNOUT signal.  
+**Fix:** Run the built-in test:
+
+```bash
+python3 sfs-monitor.py --runout-test --runout-gpio 27
+```
+
+Remove filament and confirm the state toggles.
+
+---
+
+### Motion pulses not detected
+**Cause:** MOTION line wiring or pull-up missing.  
+**Fix:** Verify:
+- MOTION is connected to **GPIO26**
+- Internal pull-up is enabled (default)
+- Run `--doctor` mode and manually move filament
+
+```bash
+python3 sfs-monitor.py --doctor
+```
+
+---
+
+### Printer pauses but will not resume
+**Cause:** Monitor state not reset after pause.  
+**Fix:** Add this to **Pause Print** or **Resume Print** G-code:
+
+```gcode
+M118 A1 // sensor:reset
+```
+
+---
+
+### Serial port disconnects randomly
+**Cause:** USB power management or cable issue.  
+**Fix:**  
+- Use a short, high-quality USB-C cable  
+- Disable USB autosuspend:
+  ```bash
+  echo -1 | sudo tee /sys/module/usbcore/parameters/autosuspend
+  ```
+
+---
+
+### Logs are too noisy
+**Fix:**  
+- Use `--quiet-temps`
+- Enable structured logging:
+  ```bash
+  --log-json
+  ```
