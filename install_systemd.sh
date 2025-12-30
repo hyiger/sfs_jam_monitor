@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Simple installer for systemd unit
-# Assumes:
-# - You cloned/copied files into /home/pi/sfs-jam-monitor
-# - You want the service to run as user 'pi'
-# - Your printer is at /dev/ttyACM0 (edit the service file if different)
-
 SERVICE_NAME="sfs-jam-monitor.service"
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
