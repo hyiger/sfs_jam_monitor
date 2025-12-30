@@ -13,7 +13,7 @@ Group=pi
 WorkingDirectory=/home/pi/sfs-jam-monitor
 
 # IMPORTANT: Prefer /dev/serial/by-id/... when possible for stable device naming.
-ExecStart=/usr/bin/python3 /home/pi/sfs-jam-monitor/sfs_jam_monitor.py -p /dev/ttyACM0 --auto-reset --reset-pulses 1.5 --quiet-temps --runout-gpio 27
+ExecStart=/usr/bin/python3 /home/pi/sfs-jam-monitor/sfs-monitor.py -p /dev/ttyACM0 --motion-gpio 26 --auto-reset --reset-pulses 1.5 --quiet-temps --runout-gpio 27
 
 Restart=on-failure
 RestartSec=2
