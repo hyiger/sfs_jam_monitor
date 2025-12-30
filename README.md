@@ -65,61 +65,6 @@ When a filament jam is detected, the script triggers a clean **`M600` filament c
 >
 > That’s it — jams or runout will trigger an automatic **M600 pause**.
 
-
-
-
-
-
-
-
-
-- [Overview](#overview)
-- [Quick Start](#-quick-start)
-- [Installation](#installation)
-- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
-- [Wiring Diagram](#wiring-diagram)
-- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
-- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
-- [CLI Usage](#cli-usage)
-- [Status and Version](#cli-status-and-version)
-- [JSON Logging](#json-logging)
-- [Systemd Service](#systemd-service)
-- [Calibration](#calibration)
-- [Troubleshooting](#troubleshooting)
-- [Optional Polish & Enhancements](#optional-polish--enhancements)
-- [License](#license)
-
-
-- [Overview](#overview)
-- [Installation](#installation)
-- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
-- [Wiring Diagram](#wiring-diagram)
-- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
-- [PrusaSlicer End G-code Integration](#prusaslicer-end-g-code-integration)
-- [CLI Usage](#cli-usage)
-- [Status and Version](#cli-status-and-version)
-- [JSON Logging](#json-logging)
-- [Systemd Service](#systemd-service)
-- [Calibration](#calibration)
-- [Optional Polish & Enhancements](#optional-polish--enhancements)
-- [License](#license)
-
-
-- [Overview](#overview)
-- [Installation](#installation)
-- [Virtual Environment (venv)](#optional-install-using-a-virtual-environment-recommended)
-- [Wiring Diagram](#wiring-diagram)
-- [PrusaSlicer Start G-code Integration](#prusaslicer-start-g-code-integration)
-- [CLI Usage](#cli-usage)
-- [Status and Version](#cli-status-and-version)
-- [JSON Logging](#json-logging)
-- [Systemd Service](#systemd-service)
-- [Calibration](#calibration)
-- [License](#license)
-
-
-
-
 ---
 
 ## Key Features
@@ -199,39 +144,74 @@ chmod +x sfs-monitor.py
 
 ## PrusaSlicer Start G-code Integration 🧾
 
-⚠️ **This step is mandatory.**  
-The monitor relies on `M118` markers echoed back by firmware.
+The monitor is controlled via G-code comments sent over the serial console using `M118 A1`.
+These comments are ignored by stock Marlin but are parsed by the monitor.
 
-### Printer Settings → Custom G-code
+### Required Start G-code additions
 
-#### Start G-code
+#### Enable the monitor
+Add this **after** setting extruder mode (e.g. after `M83`):
+
 ```gcode
-M118 A1 sensor:reset
-M118 A1 sensor:enable
+M118 A1 // sensor:enable
 ```
 
-(Optional comments for readability)
+#### Reset the monitor before first extrusion
+Add this **immediately before the purge sequence**, before the first `G92 E0`:
+
 ```gcode
-// sensor:reset
-// sensor:enable
+M118 A1 // sensor:reset
 ```
 
-#### End G-code
+This guarantees:
+- no stale latch from a previous print
+- first purge pulses are treated as valid motion
+- jam detection starts in a clean state
+
+### Example placement (excerpt)
+
 ```gcode
-M118 A1 sensor:disable
+M83 ; extruder relative mode
+M118 A1 // sensor:enable
+
+...
+
+M109 S{first_layer_temperature[0]}
+M118 A1 // sensor:reset
+G92 E0
 ```
 
-(Optional)
+---
+
+## PrusaSlicer End G-code Integration ✅
+
+Add the following to your **End G-code** in PrusaSlicer to cleanly disable the
+monitor at the end of a print:
+
 ```gcode
-// sensor:disable
+M118 A1 // sensor:disable
 ```
 
-### ⚠️ Do NOT put `sensor:reset` here:
-- Pause Print G-code
-- Filament Change G-code
-- Toolchange G-code
+### Recommended placement
 
-Resetting during pause is unsafe and can cause false re-arming.
+Place this line **after the final park move** and **before motors are disabled**.
+For example:
+
+```gcode
+G1 X242 Y211 F10200 ; park
+M118 A1 // sensor:disable
+G4 ; wait
+M84 X Y E ; disable motors
+```
+
+### Why this matters
+
+- Prevents false jam/runout detection during cooldown
+- Avoids edge cases during motor shutdown
+- Produces clean, well-bounded logs per print
+- Ensures the monitor is inactive between jobs
+
+This is especially important when the printer remains powered on between prints.
 
 ---
 
@@ -363,49 +343,6 @@ GitHub renders SVG directly:
 
 ---
 
-## PrusaSlicer Start G-code Integration 🧾
-
-The monitor is controlled via G-code comments sent over the serial console using `M118 A1`.
-These comments are ignored by stock Marlin but are parsed by the monitor.
-
-### Required Start G-code additions
-
-#### Enable the monitor
-Add this **after** setting extruder mode (e.g. after `M83`):
-
-```gcode
-M118 A1 // sensor:enable
-```
-
-#### Reset the monitor before first extrusion
-Add this **immediately before the purge sequence**, before the first `G92 E0`:
-
-```gcode
-M118 A1 // sensor:reset
-```
-
-This guarantees:
-- no stale latch from a previous print
-- first purge pulses are treated as valid motion
-- jam detection starts in a clean state
-
-### Example placement (excerpt)
-
-```gcode
-M83 ; extruder relative mode
-M118 A1 // sensor:enable
-
-...
-
-M109 S{first_layer_temperature[0]}
-M118 A1 // sensor:reset
-G92 E0
-```
-
-
-
----
-
 ## Additional CLI Utilities
 
 ### JSON status output
@@ -457,41 +394,6 @@ python3 sfs-monitor.py -p /dev/ttyACM0 --log-json --log-file /var/log/sfs-monito
 ```
 
 Tip: combine with `--quiet-temps` to reduce noise from periodic temperature reports.
-
----
-
----
-
-## PrusaSlicer End G-code Integration ✅
-
-Add the following to your **End G-code** in PrusaSlicer to cleanly disable the
-monitor at the end of a print:
-
-```gcode
-M118 A1 // sensor:disable
-```
-
-### Recommended placement
-
-Place this line **after the final park move** and **before motors are disabled**.
-For example:
-
-```gcode
-G1 X242 Y211 F10200 ; park
-M118 A1 // sensor:disable
-G4 ; wait
-M84 X Y E ; disable motors
-```
-
-### Why this matters
-
-- Prevents false jam/runout detection during cooldown
-- Avoids edge cases during motor shutdown
-- Produces clean, well-bounded logs per print
-- Ensures the monitor is inactive between jobs
-
-This is especially important when the printer remains powered on between prints.
-
 
 ---
 
