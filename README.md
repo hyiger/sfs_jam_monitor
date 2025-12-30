@@ -196,3 +196,27 @@ python3 sfs_jam_monitor.py --runout-test --runout-gpio 27
 ```bash
 python3 sfs_jam_monitor.py --runout-test --runout-gpio 27 --runout-active-high
 ```
+
+---
+
+## CLI: Status and Version
+
+Print the tool version:
+
+```bash
+python3 sfs_jam_monitor.py --version
+```
+
+Print a one-shot status report (useful for systemd/SSH debugging):
+
+```bash
+python3 sfs_jam_monitor.py -p /dev/ttyACM0 --status
+```
+
+You can also see example commands in:
+
+```bash
+python3 sfs_jam_monitor.py --help
+```
+
+---

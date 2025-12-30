@@ -11,12 +11,16 @@ License: GPL-3.0-or-later
 from __future__ import annotations
 
 import argparse, logging, logging.handlers, os, re, sys, threading, time
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional, List, Tuple
 
 import serial
 from gpiozero import DigitalInputDevice
+
+__version__ = "0.10.0"
+__build__ = "2025-12-29"
 
 RE_SENSOR = re.compile(r'^\s*//\s*sensor:(enable|disable|reset)\b', re.IGNORECASE)
 RE_TEMP = re.compile(r'^\s*T:(?P<tcur>-?\d+(?:\.\d+)?)/(?P<ttgt>-?\d+(?:\.\d+)?)\s+'
@@ -157,7 +161,31 @@ def atomic_write_text(path: Path, content: str):
     os.replace(tmp, path)
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(
+    description="BTT SFS v2.0 filament jam + runout monitor (stock Marlin / PrusaConnect)",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    epilog=textwrap.dedent("""
+    Examples:
+
+      # Normal operation (jam + runout)
+      python3 sfs_jam_monitor.py -p /dev/ttyACM0 --auto-reset --quiet-temps
+
+      # Dry-run (detect only, no M600 sent)
+      python3 sfs_jam_monitor.py -p /dev/ttyACM0 --dry-run
+
+      # Runout wiring test (no serial required)
+      python3 sfs_jam_monitor.py --runout-test --runout-gpio 27
+
+      # Active-high runout signal
+      python3 sfs_jam_monitor.py --runout-test --runout-gpio 27 --runout-active-high
+
+      # One-shot status
+      python3 sfs_jam_monitor.py -p /dev/ttyACM0 --status
+
+      # Version
+      python3 sfs_jam_monitor.py --version
+    """)
+)
     ap.add_argument("-p", "--port", default="", help="Printer serial port (required unless --runout-test)")
     ap.add_argument("-b","--baud", type=int, default=115200)
     ap.add_argument("--gpio", type=int, default=26, help="SFS motion pulse GPIO (BCM)")
@@ -197,7 +225,12 @@ def main() -> int:
     ap.add_argument("--rts", choices=["on","off"], default="off")
     args = ap.parse_args()
 
-    if (not args.port) and (not args.runout_test):
+    if args.version:
+        print(f"sfs-jam-monitor {__version__} ({__build__})")
+        print("License: GPL-3.0-or-later")
+        return 0
+
+    if (not args.port) and (not args.runout_test) and (not args.status):
         ap.error("--port is required unless --runout-test is used")
 
     log = setup_logging(args)
@@ -336,6 +369,25 @@ if args.runout_test:
 
     link.start(on_line)
 
+
+def print_status():
+    now = time.time()
+    armed = (now <= st.armed_until) and st.ever_pulsed and (not st.latched)
+    print("SFS Jam Monitor Status")
+    print("----------------------")
+    print(f"Version           : {__version__} ({__build__})")
+    print(f"Enabled           : {st.enabled}")
+    print(f"Latched           : {st.latched}")
+    print(f"Trigger reason    : {st.reason or 'none'}")
+    print(f"Serial connected  : {link.connected.is_set()}")
+    print(f"Armed             : {armed}")
+    print(f"Pulse total       : {st.pulse_total}")
+    print(f"Last pulse age    : {max(0.0, now - st.last_pulse_time):.2f}s")
+    print(f"Runout asserted   : {st.runout_asserted}")
+    print(f"Jam count         : {st.jam_count}")
+    print(f"Runout count      : {st.runout_count}")
+
+
     # Runout debounce
     if runout_pin is not None:
         lock = threading.Lock()
@@ -353,6 +405,20 @@ if args.runout_test:
             threading.Thread(target=deb, args=(now,), daemon=True).start()
         runout_pin.when_activated = on_runout_change
         runout_pin.when_deactivated = on_runout_change
+
+# One-shot status (attempt quick serial connect, then exit)
+if args.status:
+    t0 = time.time()
+    while (args.port and (not link.connected.is_set())) and (time.time() - t0) < 1.5:
+        time.sleep(0.05)
+    print_status()
+    link.shutdown()
+    pulse_pin.close()
+    if runout_pin is not None:
+        runout_pin.close()
+    return 0
+
+
 
     last_hb = 0.0
     last_phb = 0.0
